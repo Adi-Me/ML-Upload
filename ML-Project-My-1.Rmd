@@ -1,0 +1,138 @@
+---
+title: "Coursera Project"
+author: "MKB"
+date: "October 23, 2016"
+output: html_document
+---
+```{r include = FALSE}
+library(caret)
+library(randomForest) 
+library(rpart) 
+library(rpart.plot) 
+library(klaR)
+library(rattle)
+
+```
+Since we want the results to be reproducable 
+
+```{r}
+set.seed(4321)
+```
+
+Load the test and training data from the files and replacing missing to "NA".
+
+```{r}
+TrSet <- read.csv("C:/Users/madhura.belani/Dropbox/00-KB/00-Machine Learning/Coursera/Course Project/pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+TstSet <- read.csv("C:/Users/madhura.belani/Dropbox/00-KB/00-Machine Learning/Coursera/Course Project/pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+```
+Checking the data size
+
+```{r}
+dim(TrSet)
+dim(TstSet)
+```
+
+As part of cleaning the data, remvoe columns that have all missing values
+
+```{r}
+TrSet<-TrSet[,colSums(is.na(TrSet)) == 0]
+TstSet <-TstSet[,colSums(is.na(TstSet)) == 0]
+```
+
+Checking the data size after cleansing
+
+```{r}
+dim(TrSet)
+dim(TstSet)
+```
+Removed 100 empty columns (i.e featuers)
+
+Now removing the unnessessary first 7 columns
+
+```{r}
+ TrSet   <-TrSet[,-c(1:7)]
+ TstSet <-TstSet[,-c(1:7)]
+```
+
+Checking further to see if we can remove any Near Zero Variables...no variable with nzv=TRUE...so looks like we have finished with pre-processing the Training Set.
+```{r}
+nsv <- nearZeroVar(TrSet, saveMetrics = TRUE)
+View(nsv)
+```
+
+
+Create a subset of the training data for cross validaion with 75% for training and 25% for validation
+
+```{r}
+SubSamples <- createDataPartition(y=TrSet$classe, p=0.75, list=FALSE)
+SubTraining <- TrSet[SubSamples, ] 
+SubTesting <- TrSet[-SubSamples, ]
+ 
+dim(SubTraining)
+dim(SubTesting)
+```
+Build the histogram to scan the frequent at which the different classes appear in both SubTrainng and SubTesting data sets
+
+```{r}
+plot(SubTraining$classe, col="red", main="Frequency of the variable classe in SubTraining set", xlab="classe levels", ylab="Frequency")
+plot(SubTraining$classe, col="blue", main="Frequency of the variable classe in SubTesting set", xlab="classe levels", ylab="Frequency")
+```
+Using the Decision Tree Model create a prediction model on SubTraining and then predict it on SubTesting and plot the decision tree. We can test the accuracy of the prediction on SubTesting using the ConfusionMatrix
+
+```{r}
+modelDT <- rpart(classe ~ ., data=SubTraining, method="class")
+predictionDT <- predict(modelDT, SubTesting, type = "class")
+rpart.plot(modelDT, main="Classification Tree", extra=102, under=TRUE, faclen=0)
+confusionMatrix(predictionDT, SubTesting$classe)
+fancyRpartPlot((modelDT))
+```
+
+Repeat the steps above now using the Random Forest model
+
+```{r}
+modelRF <- randomForest(classe ~. , data=SubTraining, method="class")
+predictionRF <- predict(modelRF, SubTesting, type = "class")
+confusionMatrix(predictionRF, SubTesting$classe)
+```
+
+Repeat the steps above now using the Gradient Boosting Model
+```{r}
+# modelGBM <- train(classe ~ ., data=SubTraining, method="gbm", verbose=FALSE)
+# predictionGBM <- predict(modelGBM, SubTesting, type = "raw")
+# confusionMatrix(predictionGBM, SubTesting$classe)
+```
+
+
+
+Repeat the steps above now using the Linear Discrminate Analysis
+```{r}
+modelLDA <- train(classe ~ ., data=SubTraining, method="lda", verbose=FALSE)
+predictionLDA <- predict(modelLDA, SubTesting, type = "raw")
+confusionMatrix(predictionLDA, SubTesting$classe)
+
+```
+
+Repeat the steps above now using the Naive Bayes Model
+```{r}
+# modelNB <- train(classe ~ ., data=SubTraining, method="nb", verbose=FALSE)
+# predictionNB <- predict(modelNB, SubTesting, type = "raw")
+# confusionMatrix(predictionNB, SubTesting$classe)
+```
+
+Accuracy of Random Forest is higher than Decision Tree so apply the ModelRT to the TstSet to get the prediction.
+```{r}
+predictfinal <- predict(modelRF, TstSet, type="class")
+predictfinal
+```
+
+
+
+
+
+
+
+
+
+
+
+
